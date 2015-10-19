@@ -1,16 +1,16 @@
 #include "ofxAudioAnalyzer.h"
 
 
-void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate){
+void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate, int numMelBands){
 
         framesize = bufferSize;
         hopsize = framesize/2;
         sr = sampleRate;
         zeropadding = 0;
         framerate = (Real) sr / hopsize;
-
+    
         spectrum_f.assign((bufferSize/2)+1, 0.0);
-        melBands_f.assign(24, 0);
+        melBands_f.assign(numMelBands, 0);
         dct_f.assign(10,0 );
         hpcp_f.assign(12,0);
 
@@ -70,8 +70,13 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate){
                                     "orderBy", "frequency");
 
 
-        melBands = factory.create("MelBands", "inputSize", (framesize/2)+1,
-                                  "sampleRate", sr);
+        melBands = factory.create("MelBands",
+                                  "inputSize", (framesize/2)+1,
+                                  "sampleRate", sr,
+                                  "numberBands", numMelBands);
+//                                  "lowFrequencyBound", 20,
+//                                  "highFrequencyBound", 22050
+
         dct = factory.create("DCT", "inputSize", 24, "outputSize", 10);
 
         tuningFreq = factory.create("TuningFrequency");

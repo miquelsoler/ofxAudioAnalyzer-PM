@@ -16,7 +16,7 @@ class ofxAudioAnalyzer
 {
     public:
 
-        void setup(int bufferSize, int sampleRate);
+        void setup(int bufferSize, int sampleRate, int numMelBands);
         void exit();
         void analyze(float * iBuffer, int bufferSize);
     
