@@ -90,6 +90,7 @@ class ofxAudioAnalyzer
         int sr;
         int zeropadding;
         Real framerate;
+        int numMelBands;
     
     //Algorithm pointers-----------------
 
