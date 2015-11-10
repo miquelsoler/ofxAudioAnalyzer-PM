@@ -2,7 +2,7 @@
 
 void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
         bool _doMelbands, int _numMelBands,
-        bool _doSilence, int silenceThreshold){
+        bool _doSilence, int _silenceThreshold){
 
     framesize = bufferSize;
     hopsize = framesize/2;
@@ -21,7 +21,7 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     detecBufferSize = bufferSize; ///revisar
     detection_sum.assign(detecBufferSize,0);
     detections.assign(3, vector<Real> (detecBufferSize));
-    silenceTreshold = 0.02;
+    onsetSilenceTreshold = 0.02;
     alpha = 0.1;
     addHfc = addComplex = addFlux = true;
 
@@ -110,7 +110,7 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
 
     // TODO: Silence
     startStopSilence = factory.create("StartStopSilence",
-            "threshold", silenceThreshold);
+            "threshold", _silenceThreshold);
 
 
 
@@ -446,7 +446,7 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
             n++;
         }
         if(n>0) detection_sum[i] /= n;
-        if(detection_sum[i] < silenceTreshold) detection_sum[i] = 0.0;
+        if(detection_sum[i] < onsetSilenceTreshold) detection_sum[i] = 0.0;
     }
 
     Real buffer_median = median (detection_sum);

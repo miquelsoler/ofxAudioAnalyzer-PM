@@ -56,7 +56,7 @@ public:
     float* getDct(){return &dct_f[0];}
     float* getHpcp(){return &hpcp_f[0];}
 
-    void setOnsetTreshold(float val){silenceTreshold=val;}
+    void setOnsetTreshold(float val){onsetSilenceTreshold =val;}
     void setOnsetAlpha(float val){alpha=val;}
 
     // TODO: Silence
@@ -106,7 +106,7 @@ public:
     // TODO: Silence
     bool silenceEvaluation();
 
-    Real silenceTreshold, alpha;
+    Real onsetSilenceTreshold, alpha;
 
     int framesize;
     int hopsize;
