@@ -1,191 +1,208 @@
 #include "ofxAudioAnalyzer.h"
 
+void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
+        bool _doMelbands, int _numMelBands,
+        bool _doSilence, int silenceThreshold){
 
-void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate, int numMelBands_){
+    framesize = bufferSize;
+    hopsize = framesize/2;
+    sr = sampleRate;
+    zeropadding = 0;
+    framerate = (Real) sr / hopsize;
+    numMelBands = _numMelBands;
 
-        framesize = bufferSize;
-        hopsize = framesize/2;
-        sr = sampleRate;
-        zeropadding = 0;
-        framerate = (Real) sr / hopsize;
-        numMelBands = numMelBands_;
-    
-        spectrum_f.assign((bufferSize/2)+1, 0.0);
-        melBands_f.assign(numMelBands, 0);
-        dct_f.assign(10,0 );
-        hpcp_f.assign(12,0);
-
-    
-        ///onsets...
-        detecBufferSize = bufferSize; ///revisar
-        detection_sum.assign(detecBufferSize,0);
-        detections.assign(3, vector<Real> (detecBufferSize));
-        silenceTreshold = 0.02;
-        alpha = 0.1;
-        addHfc = addComplex = addFlux = true;
-
-        doRms=doEnergy=doPower=doPitch=doTuning=doOnsets=doMelbands=doMfcc=
-        doHpcp=doHfc=doCentroid=doSpcCmplx=doInharmon= true;
-
-        audioBuffer.resize(bufferSize);
-
-        essentia::init();
-
-    /// instanciate factory and create algorithms---------------------------------------------------
-
-        AlgorithmFactory& factory = AlgorithmFactory::instance();
-
-        rms = factory.create("RMS");
-        energy = factory.create("Energy");
-        power = factory.create("InstantPower");
-
-        dcremoval = factory.create("DCRemoval", "sampleRate", sr);
-
-        window = factory.create("Windowing",
-                                     "type", "hann",
-                                     "zeroPadding", zeropadding);
-
-        fft = factory.create("FFT", "size", framesize);
-        cartesian2polar = factory.create("CartesianToPolar");
-
-        onsetHfc     = factory.create("OnsetDetection", "method", "hfc", "sampleRate", sr);
-        onsetComplex = factory.create("OnsetDetection", "method", "complex", "sampleRate", sr);
-        onsetFlux    = factory.create("OnsetDetection", "method", "flux", "sampleRate", sr);
-
-        spectrum = factory.create("Spectrum",
-                                       "size", framesize);
-
-        hfc = factory.create("HFC", "sampleRate", sr);
-
-        pitchSalience = factory.create("PitchSalience", "sampleRate",sr);
-
-        centroid = factory.create("Centroid", "range", sr/2);
-
-        spectralComplex = factory.create("SpectralComplexity", "sampleRate", sr);
-
-        peaks = factory.create("SpectralPeaks",
-                                    "maxPeaks", 10000,
-                                    "magnitudeThreshold", 0.00001,
-                                    "minFrequency", 40,
-                                    "maxFrequency", 5000,
-                                    "orderBy", "frequency");
+    spectrum_f.assign((bufferSize/2)+1, 0.0);
+    melBands_f.assign(numMelBands, 0);
+    dct_f.assign(10,0 );
+    hpcp_f.assign(12,0);
 
 
-        melBands = factory.create("MelBands",
-                                  "inputSize", (framesize/2)+1,
-                                  "sampleRate", sr,
-                                  "numberBands", numMelBands);
+    ///onsets...
+    detecBufferSize = bufferSize; ///revisar
+    detection_sum.assign(detecBufferSize,0);
+    detections.assign(3, vector<Real> (detecBufferSize));
+    silenceTreshold = 0.02;
+    alpha = 0.1;
+    addHfc = addComplex = addFlux = true;
+
+    doRms=doEnergy=doPower=doPitch=doTuning=doOnsets=doMfcc=
+    doHpcp=doHfc=doCentroid=doSpcCmplx=doInharmon= true;
+    doMelbands = _doMelbands;
+
+    // TODO: Silence
+    doStartStopSilence = _doSilence;
+    silenceEvaluated = false;
+
+    audioBuffer.resize(bufferSize);
+
+    essentia::init();
+
+/// instanciate factory and create algorithms---------------------------------------------------
+
+    AlgorithmFactory& factory = AlgorithmFactory::instance();
+
+    rms = factory.create("RMS");
+    energy = factory.create("Energy");
+    power = factory.create("InstantPower");
+
+    dcremoval = factory.create("DCRemoval", "sampleRate", sr);
+
+    window = factory.create("Windowing",
+                                 "type", "hann",
+                                 "zeroPadding", zeropadding);
+
+    fft = factory.create("FFT", "size", framesize);
+    cartesian2polar = factory.create("CartesianToPolar");
+
+    onsetHfc     = factory.create("OnsetDetection", "method", "hfc", "sampleRate", sr);
+    onsetComplex = factory.create("OnsetDetection", "method", "complex", "sampleRate", sr);
+    onsetFlux    = factory.create("OnsetDetection", "method", "flux", "sampleRate", sr);
+
+    spectrum = factory.create("Spectrum",
+                                   "size", framesize);
+
+    hfc = factory.create("HFC", "sampleRate", sr);
+
+    pitchSalience = factory.create("PitchSalience",
+            "highBoundary", 1000,
+            "sampleRate", sr);
+
+    centroid = factory.create("Centroid", "range", sr/2);
+
+    spectralComplex = factory.create("SpectralComplexity", "sampleRate", sr);
+
+    peaks = factory.create("SpectralPeaks",
+                                "maxPeaks", 10000,
+                                "magnitudeThreshold", 0.00001,
+                                "minFrequency", 40,
+                                "maxFrequency", 5000,
+                                "orderBy", "frequency");
+
+
+    melBands = factory.create("MelBands",
+                              "inputSize", (framesize/2)+1,
+                              "sampleRate", sr,
+                              "numberBands", numMelBands);
 //                                  "lowFrequencyBound", 20,
 //                                  "highFrequencyBound", 22050
 
-        dct = factory.create("DCT", "inputSize", numMelBands, "outputSize", 1);//Bug, we have to find a better solution output size has to be less than inputsize
+    dct = factory.create("DCT", "inputSize", numMelBands, "outputSize", 1);//Bug, we have to find a better solution output size has to be less than inputsize
 
-        tuningFreq = factory.create("TuningFrequency");
+    tuningFreq = factory.create("TuningFrequency");
 
-        inharmonicity = factory.create("Inharmonicity");
+    inharmonicity = factory.create("Inharmonicity");
 
-        pitchDetect = factory.create("PitchYinFFT",
-                                          "frameSize", framesize,
-                                          "sampleRate", sr);
+    pitchDetect = factory.create("PitchYinFFT",
+                                      "frameSize", framesize,
+                                      "sampleRate", sr);
 
-        harmonicPeaks = factory.create("HarmonicPeaks");
+    harmonicPeaks = factory.create("HarmonicPeaks");
 
-        hpcp = factory.create("HPCP",
-                                       "size", 12,
-                                       "referenceFrequency", 440,
-                                       "bandPreset", false,
-                                       "minFrequency", 40.0,
-                                       "maxFrequency", 5000.0,
-                                       "weightType", "squaredCosine",
-                                       "nonLinear", false,
-                                       "windowSize", 4.0/3.0);
+    hpcp = factory.create("HPCP",
+                                   "size", 12,
+                                   "referenceFrequency", 440,
+                                   "bandPreset", false,
+                                   "minFrequency", 40.0,
+                                   "maxFrequency", 5000.0,
+                                   "weightType", "squaredCosine",
+                                   "nonLinear", false,
+                                   "windowSize", 4.0/3.0);
 
-  
+    // TODO: Silence
+    startStopSilence = factory.create("StartStopSilence",
+            "threshold", silenceThreshold);
+
+
 
     ///Algorithm diagram--------------------------------------------------------
 
 
-        //DCRemoval
-        dcremoval->input("signal").set(audioBuffer);
-        dcremoval->output("signal").set(audioBuffer_dc);
-        //RMS
-        rms->input("array").set(audioBuffer_dc);
-        rms->output("rms").set(rmsValue);
-        //Energy
-        energy->input("array").set(audioBuffer_dc);
-        energy->output("energy").set(energyValue);
-        //Power
-        power->input("array").set(audioBuffer_dc);
-        power->output("power").set(powerValue);
-        //Window
-        window->input("frame").set(audioBuffer_dc);
-        window->output("frame").set(windowedframe);
-        //Onsets
-        fft->input("frame").set(windowedframe);
-        fft->output("fft").set(fftValues);
-        cartesian2polar->input("complex").set(fftValues);
-        cartesian2polar->output("magnitude").set(c2pMagValues);
-        cartesian2polar->output("phase").set(c2pPhaseValues);
-        //-
-        onsetHfc->input("spectrum").set(c2pMagValues);
-        onsetHfc->input("phase").set(c2pPhaseValues);
-        onsetHfc->output("onsetDetection").set(onsetHfcValue);
-        //-
-        onsetComplex->input("spectrum").set(c2pMagValues);
-        onsetComplex->input("phase").set(c2pPhaseValues);
-        onsetComplex->output("onsetDetection").set(onsetComplexValue);
-        //-
-        onsetFlux->input("spectrum").set(c2pMagValues);
-        onsetFlux->input("phase").set(c2pPhaseValues);
-        onsetFlux->output("onsetDetection").set(onsetFluxValue);
-        //Spectrum
-        spectrum->input("frame").set(windowedframe);
-        spectrum->output("spectrum").set(spec);
-        //HFC
-        hfc->input("spectrum").set(spec);
-        hfc->output("hfc").set(hfcValue);
-        //Pitch Salience
-        pitchSalience->input("spectrum").set(spec);
-        pitchSalience->output("pitchSalience").set(salienceValue);
-        //Centroid
-        centroid->input("array").set(spec);
-        centroid->output("centroid").set(centroidValue);
-        //Spectral Complexity
-        spectralComplex->input("spectrum").set(spec);
-        spectralComplex->output("spectralComplexity").set(spectralComplexValue);
-        //Peak detection
-        peaks->input("spectrum").set(spec);
-        peaks->output("frequencies").set(peakFreqValues);
-        peaks->output("magnitudes").set(peakMagValues);
-        //HPCP
-        hpcp->input("frequencies").set(peakFreqValues);
-        hpcp->input("magnitudes").set(peakMagValues);
-        hpcp->output("hpcp").set(hpcpValues);
-        //MelBands
-        melBands->input("spectrum").set(spec);
-        melBands->output("bands").set(melValues);
-        //DCT
-        dct->input("array").set(logMelBands);
-        dct->output("dct").set(dctValues);
-        //PitchDetection
-        pitchDetect->input("spectrum").set(spec);
-        pitchDetect->output("pitch").set(thisPitch);
-        pitchDetect->output("pitchConfidence").set(thisConf);
-        //Tuning frequency
-        tuningFreq->input("frequencies").set(peakFreqValues);
-        tuningFreq->input("magnitudes").set(peakMagValues);
-        tuningFreq->output("tuningFrequency").set(tunFreqValue);
-        tuningFreq->output("tuningCents").set(tunCentsValue);
-        //HarmonicPeaks
-        harmonicPeaks->input("frequencies").set(peakFreqValues);
-        harmonicPeaks->input("magnitudes").set(peakMagValues);
-        harmonicPeaks->input("pitch").set(thisPitch);
-        harmonicPeaks->output("harmonicFrequencies").set(harmFreqValues);
-        harmonicPeaks->output("harmonicMagnitudes").set(harmMagValues);
-        //Inharmonicity
-        inharmonicity->input("frequencies").set(harmFreqValues);
-        inharmonicity->input("magnitudes").set(harmMagValues);
-        inharmonicity->output("inharmonicity").set(inharmValue);
+    //DCRemoval
+    dcremoval->input("signal").set(audioBuffer);
+    dcremoval->output("signal").set(audioBuffer_dc);
+    //RMS
+    rms->input("array").set(audioBuffer_dc);
+    rms->output("rms").set(rmsValue);
+    //Energy
+    energy->input("array").set(audioBuffer_dc);
+    energy->output("energy").set(energyValue);
+    //Power
+    power->input("array").set(audioBuffer_dc);
+    power->output("power").set(powerValue);
+    //Window
+    window->input("frame").set(audioBuffer_dc);
+    window->output("frame").set(windowedframe);
+    //Onsets
+    fft->input("frame").set(windowedframe);
+    fft->output("fft").set(fftValues);
+    cartesian2polar->input("complex").set(fftValues);
+    cartesian2polar->output("magnitude").set(c2pMagValues);
+    cartesian2polar->output("phase").set(c2pPhaseValues);
+    //-
+    onsetHfc->input("spectrum").set(c2pMagValues);
+    onsetHfc->input("phase").set(c2pPhaseValues);
+    onsetHfc->output("onsetDetection").set(onsetHfcValue);
+    //-
+    onsetComplex->input("spectrum").set(c2pMagValues);
+    onsetComplex->input("phase").set(c2pPhaseValues);
+    onsetComplex->output("onsetDetection").set(onsetComplexValue);
+    //-
+    onsetFlux->input("spectrum").set(c2pMagValues);
+    onsetFlux->input("phase").set(c2pPhaseValues);
+    onsetFlux->output("onsetDetection").set(onsetFluxValue);
+    //Spectrum
+    spectrum->input("frame").set(windowedframe);
+    spectrum->output("spectrum").set(spec);
+    //HFC
+    hfc->input("spectrum").set(spec);
+    hfc->output("hfc").set(hfcValue);
+    //Pitch Salience
+    pitchSalience->input("spectrum").set(spec);
+    pitchSalience->output("pitchSalience").set(salienceValue);
+    //Centroid
+    centroid->input("array").set(spec);
+    centroid->output("centroid").set(centroidValue);
+    //Spectral Complexity
+    spectralComplex->input("spectrum").set(spec);
+    spectralComplex->output("spectralComplexity").set(spectralComplexValue);
+    //Peak detection
+    peaks->input("spectrum").set(spec);
+    peaks->output("frequencies").set(peakFreqValues);
+    peaks->output("magnitudes").set(peakMagValues);
+    //HPCP
+    hpcp->input("frequencies").set(peakFreqValues);
+    hpcp->input("magnitudes").set(peakMagValues);
+    hpcp->output("hpcp").set(hpcpValues);
+    //MelBands
+    melBands->input("spectrum").set(spec);
+    melBands->output("bands").set(melValues);
+    //DCT
+    dct->input("array").set(logMelBands);
+    dct->output("dct").set(dctValues);
+    //PitchDetection
+    pitchDetect->input("spectrum").set(spec);
+    pitchDetect->output("pitch").set(thisPitch);
+    pitchDetect->output("pitchConfidence").set(thisConf);
+    //Tuning frequency
+    tuningFreq->input("frequencies").set(peakFreqValues);
+    tuningFreq->input("magnitudes").set(peakMagValues);
+    tuningFreq->output("tuningFrequency").set(tunFreqValue);
+    tuningFreq->output("tuningCents").set(tunCentsValue);
+    //HarmonicPeaks
+    harmonicPeaks->input("frequencies").set(peakFreqValues);
+    harmonicPeaks->input("magnitudes").set(peakMagValues);
+    harmonicPeaks->input("pitch").set(thisPitch);
+    harmonicPeaks->output("harmonicFrequencies").set(harmFreqValues);
+    harmonicPeaks->output("harmonicMagnitudes").set(harmMagValues);
+    //Inharmonicity
+    inharmonicity->input("frequencies").set(harmFreqValues);
+    inharmonicity->input("magnitudes").set(harmMagValues);
+    inharmonicity->output("inharmonicity").set(inharmValue);
+    // TODO: Silence
+    // StartStopSilence
+    startStopSilence->input("frame").set(audioBuffer_dc);
+    startStopSilence->output("startFrame").set(silenceStartFrame);
+    startStopSilence->output("stopFrame").set(silenceStopFrame);
 
 }
 
@@ -215,6 +232,8 @@ void ofxAudioAnalyzer::exit(){
     delete onsetComplex;
     delete onsetHfc;
     delete onsetFlux;
+    // TODO: Silence
+    delete startStopSilence;
 
     essentia::shutdown();
 
@@ -225,54 +244,57 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
 
     ///Cast of incoming audio buffer to Real ------------
 
-       vector <float> fBuffer;
-       fBuffer.resize(bufferSize);
+   vector <float> fBuffer;
+   fBuffer.resize(bufferSize);
 
-        memcpy(&fBuffer[0], iBuffer, sizeof(float) * bufferSize);
-        for (int i=0; i<bufferSize;i++){
-             audioBuffer[i] = (Real) fBuffer[i];
-        }
+    memcpy(&fBuffer[0], iBuffer, sizeof(float) * bufferSize);
+    for (int i=0; i<bufferSize;i++){
+         audioBuffer[i] = (Real) fBuffer[i];
+    }
 
     /// Compute Algorithms--------------------------
 
-        dcremoval->compute();
+    dcremoval->compute();
 
-        if(doRms) rms->compute();
-        if(doEnergy) energy->compute();
-        if(doPower)power->compute();
+    if(doRms) rms->compute();
+    if(doEnergy) energy->compute();
+    if(doPower)power->compute();
 
-        window->compute();
-        if(doOnsets){
-            fft->compute();
-            cartesian2polar->compute();
-            onsetHfc->compute();
-            onsetComplex->compute();
-            onsetFlux->compute();
+    window->compute();
+    if(doOnsets){
+        fft->compute();
+        cartesian2polar->compute();
+        onsetHfc->compute();
+        onsetComplex->compute();
+        onsetFlux->compute();
+    }
+    spectrum->compute();
+    if(doHfc) hfc->compute();
+    if (doPitch){
+        pitchSalience->compute();
+        pitchDetect->compute();
+    }
+    if(doCentroid) centroid->compute();
+    if(doSpcCmplx) spectralComplex->compute();
+    if(doMelbands){
+        melBands->compute();
+        if(doMfcc){
+            logMelBands.resize(melValues.size());
+            for (int i=0; i<melValues.size(); ++i)
+                logMelBands[i] = amp2db(melValues[i]);
+            dct->compute();
         }
-        spectrum->compute();
-        if(doHfc) hfc->compute();
-        if (doPitch){
-            pitchSalience->compute();
-            pitchDetect->compute();
-        }
-        if(doCentroid) centroid->compute();
-        if(doSpcCmplx) spectralComplex->compute();
-        if(doMelbands){
-            melBands->compute();
-            if(doMfcc){
-                logMelBands.resize(melValues.size());
-                for (int i=0; i<melValues.size(); ++i)
-                    logMelBands[i] = amp2db(melValues[i]);
-                dct->compute();
-            }
-        }
-        peaks->compute();
-        if(doHpcp) hpcp->compute();
-        if (doTuning) tuningFreq->compute();
-        if (doInharmon){
-            harmonicPeaks->compute();
-            inharmonicity->compute();
-        }
+    }
+    peaks->compute();
+    if(doHpcp) hpcp->compute();
+    if (doTuning) tuningFreq->compute();
+    if (doInharmon){
+        harmonicPeaks->compute();
+        inharmonicity->compute();
+    }
+
+    // TODO: Silence
+    if (doStartStopSilence) startStopSilence->compute();
 
 
     ///Cast results to FLOATS--------------------------------------
@@ -321,45 +343,55 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
         isOnset = false;
     }
 
-        //MelBands
-        for (int i=0; i<melValues.size(); i++){
-            if(doMelbands){
-                melBands_f[i] = log10 ((float) melValues[i]);
-                if(doMfcc){
-                    for (int i=0; i<dctValues.size(); i++)
-                        dct_f[i] = (float) dctValues[i];
-                }else{
-                    for (int i=0; i<dctValues.size(); i++)
-                        dct_f[i] = 0.0;
-                }
+    //MelBands
+    for (int i=0; i<melValues.size(); i++){
+        if(doMelbands){
+            melBands_f[i] = log10 ((float) melValues[i]);
+            if(doMfcc){
+                for (int i=0; i<dctValues.size(); i++)
+                    dct_f[i] = (float) dctValues[i];
             }else{
-                melBands_f[i] = log10(0.001);
                 for (int i=0; i<dctValues.size(); i++)
                     dct_f[i] = 0.0;
             }
-        }
-        //HPCP
-        if (doHpcp){
-            for (int i=0; i<hpcpValues.size(); i++)
-                hpcp_f[i] = (float) hpcpValues[i];
         }else{
-            for (int i=0; i<hpcpValues.size(); i++)
-                hpcp_f[i] = 0.0;
+            melBands_f[i] = log10(0.001);
+            for (int i=0; i<dctValues.size(); i++)
+                dct_f[i] = 0.0;
         }
-        //HFC
-        if(doHfc) hfc_f = (float) hfcValue;
-        else hfc_f = 0.0;
-        //Centroid
-        if(doCentroid) centroid_f = (float) centroidValue;
-        else centroid_f = 0.0;
-        //SpectralComplexity
-        if (doSpcCmplx) spectralComplex_f = (float) spectralComplexValue;
-        else spectralComplex_f = 0.0;
-        //Inharmonicity
-        if (doInharmon) inharm_f = (float) inharmValue;
-        else inharm_f = 0.0;
+    }
+    //HPCP
+    if (doHpcp){
+        for (int i=0; i<hpcpValues.size(); i++)
+            hpcp_f[i] = (float) hpcpValues[i];
+    }else{
+        for (int i=0; i<hpcpValues.size(); i++)
+            hpcp_f[i] = 0.0;
+    }
+    //HFC
+    if(doHfc) hfc_f = (float) hfcValue;
+    else hfc_f = 0.0;
+    //Centroid
+    if(doCentroid) centroid_f = (float) centroidValue;
+    else centroid_f = 0.0;
+    //SpectralComplexity
+    if (doSpcCmplx) spectralComplex_f = (float) spectralComplexValue;
+    else spectralComplex_f = 0.0;
+    //Inharmonicity
+    if (doInharmon) inharm_f = (float) inharmValue;
+    else inharm_f = 0.0;
 
-
+    ///Cast results to INTEGERS--------------------------------------
+    // TODO: Silence
+    if (doStartStopSilence)
+    {
+        silenceStartFrame_i = silenceStartFrame;
+        silenceStopFrame_i = silenceStopFrame;
+        isSilent = silenceEvaluation();
+    } else {
+        silenceStartFrame_i = silenceStopFrame_i = 0;
+        isSilent = false;
+    }
 }
 //--------------------------------------------------------------
  bool ofxAudioAnalyzer::onsetEvaluation (Real iDetectHfc, Real iDetectComplex, Real iDetectFlux){
@@ -427,11 +459,30 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
 
  }
 
+// TODO: Silence
+bool ofxAudioAnalyzer::silenceEvaluation()
+{
+    bool result = true;
+
+    if (!silenceEvaluated)
+    {
+        silenceEvaluated = true;
+    }
+    else
+    {
+//        cout << "silenceStopFrame_i =" << silenceStopFrame_i << " silenceLastStopFrame=" << silenceLastStopFrame << endl;
+        result = (silenceStopFrame_i == silenceLastStopFrame);
+    }
+
+    silenceLastStopFrame = silenceStopFrame_i;
+
+    return result;
+}
+
 void ofxAudioAnalyzer::resetOnsets(){
-    
+
     hfc_max = complex_max = flux_max = 0.0;
     for (int i=0; i<detection_sum.size(); i++)
         detection_sum[i] = 0.0;
 
 }
-
