@@ -18,7 +18,7 @@ public:
 
     void setup(int bufferSize, int sampleRate,
             bool doMelbands, int numMelBands,
-            bool doSilence, int silenceThreshold);
+            bool doSilence, int silenceThreshold, unsigned int silenceQueueLength);
     void exit();
     void analyze(float * iBuffer, int bufferSize);
 
@@ -105,6 +105,8 @@ public:
 
     // TODO: Silence
     bool silenceEvaluation();
+    queue<unsigned int> silenceQueue;
+    unsigned int silenceQueueLength;
 
     Real onsetSilenceTreshold, alpha;
 

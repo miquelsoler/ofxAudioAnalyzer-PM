@@ -2,7 +2,7 @@
 
 void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
         bool _doMelbands, int _numMelBands,
-        bool _doSilence, int _silenceThreshold){
+        bool _doSilence, int _silenceThreshold, unsigned int _silenceQueueLength){
 
     framesize = bufferSize;
     hopsize = framesize/2;
@@ -32,8 +32,9 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     // TODO: Silence
     doStartStopSilence = _doSilence;
     silenceEvaluated = false;
+    silenceQueueLength = _silenceQueueLength;
 
-    audioBuffer.resize(bufferSize);
+    audioBuffer.resize((unsigned long)bufferSize);
 
     essentia::init();
 
