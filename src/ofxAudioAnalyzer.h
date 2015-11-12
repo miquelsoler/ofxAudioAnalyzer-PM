@@ -50,6 +50,8 @@ public:
 
     // TODO: Silence
     bool getIsSilent() { return isSilent; }
+    int getSilenceStartFrame() { return silenceStartFrame_i; }
+    int getSilenceStopFrame() { return silenceStopFrame_i; }
 
     float* getSpectrum(){return &spectrum_f[0];}
     float* getMelBands(){return &melBands_f[0];}
@@ -58,10 +60,6 @@ public:
 
     void setOnsetTreshold(float val){onsetSilenceTreshold =val;}
     void setOnsetAlpha(float val){alpha=val;}
-
-    // TODO: Silence
-    int getSilenceStartFrame() { return silenceStartFrame_i; }
-    int getSilenceStopFrame() { return silenceStopFrame_i; }
 
     // For storing results casted to Floats ---------------------
 
