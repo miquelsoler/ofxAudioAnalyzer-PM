@@ -105,8 +105,9 @@ public:
 
     // TODO: Silence
     bool silenceEvaluation();
-    queue<unsigned int> silenceQueue;
+    vector<int> silenceQueue;
     unsigned int silenceQueueLength;
+    unsigned int silenceQueueIndex;
 
     Real onsetSilenceTreshold, alpha;
 
@@ -194,11 +195,6 @@ public:
     vector<vector<Real> > detections;
     vector<Real> detection_sum;
     Real hfc_max, complex_max, flux_max;
-
-    // TODO: Silence
-    // Silence
-    int silenceLastStopFrame;
-    bool silenceEvaluated;
 };
 
 

@@ -31,14 +31,16 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
 
     // TODO: Silence
     doStartStopSilence = _doSilence;
-    silenceEvaluated = false;
     silenceQueueLength = _silenceQueueLength;
+    silenceQueue.reserve(silenceQueueLength);
+    silenceQueueIndex = 0;
+
 
     audioBuffer.resize((unsigned long)bufferSize);
 
     essentia::init();
 
-/// instanciate factory and create algorithms---------------------------------------------------
+/// Instantiate factory and create algorithms---------------------------------------------------
 
     AlgorithmFactory& factory = AlgorithmFactory::instance();
 
@@ -463,19 +465,15 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
 // TODO: Silence
 bool ofxAudioAnalyzer::silenceEvaluation()
 {
+    silenceQueue[silenceQueueIndex] = silenceStopFrame_i;
+
     bool result = true;
-
-    if (!silenceEvaluated)
+    for (int i=0; i<silenceQueueLength && result; i++)
     {
-        silenceEvaluated = true;
-    }
-    else
-    {
-//        cout << "silenceStopFrame_i =" << silenceStopFrame_i << " silenceLastStopFrame=" << silenceLastStopFrame << endl;
-        result = (silenceStopFrame_i == silenceLastStopFrame);
+        result = result && (silenceQueue[i] == silenceStopFrame_i);
     }
 
-    silenceLastStopFrame = silenceStopFrame_i;
+    silenceQueueIndex = (silenceQueueIndex + 1) % silenceQueueLength;
 
     return result;
 }
