@@ -459,19 +459,25 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     bool onsetDetection = detection_sum[detection_sum.size()-1] > onset_threshold;
 
     return onsetDetection;
-
  }
 
 // TODO: Silence
 bool ofxAudioAnalyzer::silenceEvaluation()
 {
-    silenceQueue[silenceQueueIndex] = silenceStopFrame_i;
+    if (silenceQueue.size() != silenceQueueLength)
+    {
+        silenceQueue.push_back(silenceStopFrame_i);
+        return true;
+    }
+
+    if (silenceStopFrame_i == silenceStartFrame_i)
+        return true;
 
     bool result = true;
+    silenceQueue[silenceQueueIndex] = silenceStopFrame_i;
+
     for (int i=0; i<silenceQueueLength && result; i++)
-    {
         result = result && (silenceQueue[i] == silenceStopFrame_i);
-    }
 
     silenceQueueIndex = (silenceQueueIndex + 1) % silenceQueueLength;
 
