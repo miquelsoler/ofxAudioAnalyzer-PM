@@ -97,8 +97,8 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
                                       "frameSize", framesize,
                                       "sampleRate", sr);
 
-    pitchDetectMelodia = factory.create("PitchMelodia", "frameSize", framesize, "sampleRate", sr);
-    pitchFilter = factory.create("PitchFilter");
+    pitchDetectMelodia = factory.create("PitchYinFFT", "frameSize", framesize, "sampleRate", sr);
+    pitchFilter = factory.create("PitchFilterMakam");
     harmonicPeaks = factory.create("HarmonicPeaks");
 
     hpcp = factory.create("HPCP",
@@ -187,12 +187,12 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetect->output("pitch").set(thisPitch);
     pitchDetect->output("pitchConfidence").set(thisConf);
     //PitchDetectionMelodia
-    pitchDetectMelodia->input("signal").set(audioBuffer_dc);
+    pitchDetectMelodia->input("spectrum").set(spec);
     pitchDetectMelodia->output("pitch").set(thisPitchMelodia);
     pitchDetectMelodia->output("pitchConfidence").set(thisConfMelodia);
     //PitchFilter
-    pitchFilter->input("pitch").set(pitchBuffer);
-    pitchFilter->input("energy").set(pitchBuffer);
+    pitchFilter->input("pitch").set(thisPitchMelodia);
+    pitchFilter->input("pitchConfidence").set(thisConfMelodia);
     pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
     //Tuning frequency
     tuningFreq->input("frequencies").set(peakFreqValues);
@@ -287,9 +287,7 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
         pitchSalience->compute();
         if(doPitchMelodia){
             pitchDetectMelodia->compute();
-            pitchBuffer[bufferFillIdx]=thisPitchMelodia;
-            bufferFillIdx++;
-            bufferFillIdx %= pitchBufferSize;
+            pitchFilter->compute();
         }else{
             pitchDetect->compute();
         }

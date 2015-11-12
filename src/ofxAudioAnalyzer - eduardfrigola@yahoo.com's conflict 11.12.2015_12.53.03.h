@@ -158,6 +158,7 @@ public:
     //For storing algorithms results-----------------
 
     Real thisPitch, thisConf;
+    Real thisPitchMelodia, thisConfMelodia;
     Real thisPitchFiltered;
     Real rmsValue;
     Real powerValue;
@@ -190,13 +191,6 @@ public:
     vector<complex<Real> > fftValues;
     vector<Real> c2pMagValues;
     vector<Real> c2pPhaseValues;
-    
-    //Pitchbuffer for pitchfilter
-    vector<Real> thisPitchMelodia;
-    vector<Real> thisConfMelodia;
-    bool filledBuffer;
-    int bufferFillIdx;
-    int pitchBufferSize;
 
     // TODO: Silence
     int silenceStartFrame;
