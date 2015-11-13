@@ -28,6 +28,7 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     doRms=doEnergy=doPower=doPitch=doTuning=doOnsets=doMfcc=
     doHpcp=doHfc=doCentroid=doSpcCmplx=doInharmon=doPitchMelodia= true;
     doMelbands = _doMelbands;
+//    doPitchMelodia = false;
 
     // TODO: Silence
     doStartStopSilence = _doSilence;
@@ -97,8 +98,10 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
                                       "frameSize", framesize,
                                       "sampleRate", sr);
 
-    pitchDetectMelodia = factory.create("PitchMelodia", "frameSize", framesize, "sampleRate", sr);
+//    pitchDetectMelodia = factory.create("PitchMelodia", "frameSize", framesize, "sampleRate", sr);
+    pitchDetectMelodia = factory.create("PitchYinFFT", "frameSize", framesize, "sampleRate", sr);
     pitchFilter = factory.create("PitchFilter");
+    multiPitchKlapuri = factory.create("MultiPitchKlapuri", "frameSize", framesize, "sampleRate", sr);
     harmonicPeaks = factory.create("HarmonicPeaks");
 
     hpcp = factory.create("HPCP",
@@ -187,13 +190,20 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetect->output("pitch").set(thisPitch);
     pitchDetect->output("pitchConfidence").set(thisConf);
     //PitchDetectionMelodia
-    pitchDetectMelodia->input("signal").set(audioBuffer_dc);
-    pitchDetectMelodia->output("pitch").set(thisPitchMelodia);
-    pitchDetectMelodia->output("pitchConfidence").set(thisConfMelodia);
-    //PitchFilter
-    pitchFilter->input("pitch").set(thisPitchMelodia);
-    pitchFilter->input("pitchConfidence").set(thisConfMelodia);
-    pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
+//    pitchDetectMelodia->input("signal").set(audioBuffer_dc);
+//    pitchDetectMelodia->output("pitch").set(thisPitchMelodia);
+//    pitchDetectMelodia->output("pitchConfidence").set(thisConfMelodia);
+    //PitchDetectionMelodia
+//    pitchDetectMelodia->input("signal").set(spec);
+//    pitchDetectMelodia->output("pitch").set(thisPitch);
+//    pitchDetectMelodia->output("pitchConfidence").set(thisConf);
+//    //PitchFilter
+//    pitchFilter->input("pitch").set(thisPitch);
+//    pitchFilter->input("pitchConfidence").set(thisConf);
+//    pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
+    //MultiPitchKlapury
+    multiPitchKlapuri->input("signal").set(audioBuffer_dc);
+    multiPitchKlapuri->output("pitch").set(thisPitchKlapuri);
     //Tuning frequency
     tuningFreq->input("frequencies").set(peakFreqValues);
     tuningFreq->input("magnitudes").set(peakMagValues);
@@ -247,6 +257,7 @@ void ofxAudioAnalyzer::exit(){
     delete onsetFlux;
     // TODO: Silence
     delete startStopSilence;
+    delete multiPitchKlapuri;
 
     essentia::shutdown();
 
@@ -286,14 +297,13 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     if (doPitch){
         pitchSalience->compute();
         if(doPitchMelodia){
-            pitchDetectMelodia->compute();
-            //pitchBuffer[bufferFillIdx]=thisPitchMelodia;
-//            bufferFillIdx++;
-//            bufferFillIdx %= pitchBufferSize;
-            pitchFilter->compute();
-        }else{
-            pitchDetect->compute();
+//            cout<<"hola"<<endl;
+//            pitchDetectMelodia->compute();
+//            cout<<"adeu"<<endl;
+//            pitchFilter->compute();
+            multiPitchKlapuri->compute();
         }
+        pitchDetect->compute();
     }
     if(doCentroid) centroid->compute();
     if(doSpcCmplx) spectralComplex->compute();
@@ -337,15 +347,21 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     if(doPitch){
         //PitchDetection
         if(doPitchMelodia){
-            for(int i=0; i<thisPitchFiltered.size(); i++){
-                //MelodiaFrequency_f = (float) thisPitchMelodia[i];
+            //cout<<thisPitchKlapuri.size()<<endl;
+            for(int i=0; i<thisPitchKlapuri.size(); i++){
+                //FilteredPitch_f[i] = (float) thisPitchMelodia[i];
                 //MelodiaConfidence_f = (float) thisConfMelodia[i];
-                FilteredPitch_f[i] = (float) thisPitchFiltered[i];
+                //FilteredPitch_f[i] = (float) thisPitchFiltered[i];
+                cout<<i<<endl;
+                for(int j=0; j<thisPitchKlapuri[i].size(); j++){
+//                    PitchKlapuri_f[i][j] = (float) thisPitchKlapuri[i][j];
+                    cout<<j<<endl;
+                }
             }
-        }else{
-            YinFrequency_f = (float) thisPitch;
-            YinConfidence_f = (float) thisConf;
+            cout<<"-----------------"<<endl;
         }
+        YinFrequency_f = (float) thisPitch;
+        YinConfidence_f = (float) thisConf;
         //PitchSalience
         salience_f = (float) salienceValue;
     }else{

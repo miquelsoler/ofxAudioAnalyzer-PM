@@ -32,7 +32,9 @@ public:
 
 //    float getPitchFreq(){return YinFrequency_f;}
 //    float getPitchConf(){return YinConfidence_f;}
-    float getPitchFreq(){if(doPitchMelodia){return FilteredPitch_f[FilteredPitch_f.size()-1];}else{return YinFrequency_f;}}
+    //float getPitchFreq(){if(doPitchMelodia){return FilteredPitch_f[FilteredPitch_f.size()-1];}else{return YinFrequency_f;}}
+    //float getPitchFreq(){if(doPitchMelodia){return PitchKlapuri_f[0][0] ;}else{return YinFrequency_f;}}
+    float getPitchFreq(){if(doPitchMelodia){return 400 ;}else{return YinFrequency_f;}}
     float getPitchConf(){if(doPitchMelodia){return MelodiaConfidence_f;}else{return YinConfidence_f;}}
     float getSalience(){return salience_f;}
     
@@ -108,6 +110,7 @@ public:
     vector<float> dct_f;
     vector<float> hpcp_f;
     vector<float> FilteredPitch_f;
+    vector<vector<float> > PitchKlapuri_f;
 
     bool onsetEvaluation (Real iDetectHfc, Real iDetectComplex, Real iDetectFlux);
 
@@ -132,6 +135,7 @@ public:
     Algorithm* pitchDetect;
     Algorithm* pitchDetectMelodia;
     Algorithm* pitchFilter;
+    Algorithm* multiPitchKlapuri;
     Algorithm* rms;
     Algorithm* energy;
     Algorithm* power;
@@ -196,9 +200,7 @@ public:
     vector<Real> thisPitchMelodia;
     vector<Real> thisConfMelodia;
     vector<Real> thisPitchFiltered;
-    bool filledBuffer;
-    int bufferFillIdx;
-    int pitchBufferSize;
+    vector<vector<Real> > thisPitchKlapuri;
 
     // TODO: Silence
     int silenceStartFrame;
