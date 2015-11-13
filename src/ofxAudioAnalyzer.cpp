@@ -191,8 +191,8 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetectMelodia->output("pitch").set(thisPitchMelodia);
     pitchDetectMelodia->output("pitchConfidence").set(thisConfMelodia);
     //PitchFilter
-    pitchFilter->input("pitch").set(pitchBuffer);
-    pitchFilter->input("energy").set(pitchBuffer);
+    pitchFilter->input("pitch").set(thisPitchMelodia);
+    pitchFilter->input("pitchConfidence").set(thisConfMelodia);
     pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
     //Tuning frequency
     tuningFreq->input("frequencies").set(peakFreqValues);
@@ -287,9 +287,10 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
         pitchSalience->compute();
         if(doPitchMelodia){
             pitchDetectMelodia->compute();
-            pitchBuffer[bufferFillIdx]=thisPitchMelodia;
-            bufferFillIdx++;
-            bufferFillIdx %= pitchBufferSize;
+            //pitchBuffer[bufferFillIdx]=thisPitchMelodia;
+//            bufferFillIdx++;
+//            bufferFillIdx %= pitchBufferSize;
+            pitchFilter->compute();
         }else{
             pitchDetect->compute();
         }
@@ -336,9 +337,11 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     if(doPitch){
         //PitchDetection
         if(doPitchMelodia){
-            MelodiaFrequency_f = (float) thisPitchMelodia;
-            MelodiaConfidence_f = (float) thisConfMelodia;
-            FilteredPitch_f = (float) thisPitchFiltered;
+            for(int i=0; i<thisPitchFiltered.size(); i++){
+                //MelodiaFrequency_f = (float) thisPitchMelodia[i];
+                //MelodiaConfidence_f = (float) thisConfMelodia[i];
+                FilteredPitch_f[i] = (float) thisPitchFiltered[i];
+            }
         }else{
             YinFrequency_f = (float) thisPitch;
             YinConfidence_f = (float) thisConf;

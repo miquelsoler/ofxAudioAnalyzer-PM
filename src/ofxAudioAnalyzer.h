@@ -32,7 +32,7 @@ public:
 
 //    float getPitchFreq(){return YinFrequency_f;}
 //    float getPitchConf(){return YinConfidence_f;}
-    float getPitchFreq(){if(doPitchMelodia){return FilteredPitch_f;}else{return YinFrequency_f;}}
+    float getPitchFreq(){if(doPitchMelodia){return FilteredPitch_f[FilteredPitch_f.size()-1];}else{return YinFrequency_f;}}
     float getPitchConf(){if(doPitchMelodia){return MelodiaConfidence_f;}else{return YinConfidence_f;}}
     float getSalience(){return salience_f;}
     
@@ -84,7 +84,7 @@ public:
     float YinFrequency_f, YinConfidence_f;
     float salience_f;
     float MelodiaFrequency_f, MelodiaConfidence_f;
-    float FilteredPitch_f;
+    //float FilteredPitch_f;
     float tFreq_f, tCents_f;
     float inharm_f;
     float hfc_f;
@@ -107,6 +107,7 @@ public:
     vector<float> melBands_f;
     vector<float> dct_f;
     vector<float> hpcp_f;
+    vector<float> FilteredPitch_f;
 
     bool onsetEvaluation (Real iDetectHfc, Real iDetectComplex, Real iDetectFlux);
 
@@ -158,7 +159,7 @@ public:
     //For storing algorithms results-----------------
 
     Real thisPitch, thisConf;
-    Real thisPitchFiltered;
+    //Real thisPitchFiltered;
     Real rmsValue;
     Real powerValue;
     Real energyValue;
@@ -194,6 +195,7 @@ public:
     //Pitchbuffer for pitchfilter
     vector<Real> thisPitchMelodia;
     vector<Real> thisConfMelodia;
+    vector<Real> thisPitchFiltered;
     bool filledBuffer;
     int bufferFillIdx;
     int pitchBufferSize;
