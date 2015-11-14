@@ -35,6 +35,11 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     silenceQueueLength = _silenceQueueLength;
 
     audioBuffer.resize((unsigned long)bufferSize);
+    
+    pitchBufferWidth=20;
+    pitchBuffer.resize((unsigned long)pitchBufferWidth);
+    confidenceBuffer.resize((unsigned long)pitchBufferWidth);
+    bufferFillIdx=0;
 
     essentia::init();
 
@@ -96,6 +101,8 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetect = factory.create("PitchYinFFT",
                                       "frameSize", framesize,
                                       "sampleRate", sr);
+    
+    pitchFilter = factory.create("PitchFilter");
 
     harmonicPeaks = factory.create("HarmonicPeaks");
 
@@ -184,6 +191,10 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetect->input("spectrum").set(spec);
     pitchDetect->output("pitch").set(thisPitch);
     pitchDetect->output("pitchConfidence").set(thisConf);
+    //PitchFilter
+    pitchFilter->input("pitch").set(pitchBuffer);
+    pitchFilter->input("pitchConfidence").set(confidenceBuffer);
+    pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
     //Tuning frequency
     tuningFreq->input("frequencies").set(peakFreqValues);
     tuningFreq->input("magnitudes").set(peakMagValues);
@@ -218,6 +229,7 @@ void ofxAudioAnalyzer::exit(){
     delete spectrum;
     delete peaks;
     delete pitchDetect;
+    delete pitchFilter;
     delete tuningFreq;
     delete inharmonicity;
     delete melBands;
@@ -274,6 +286,15 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     if (doPitch){
         pitchSalience->compute();
         pitchDetect->compute();
+        bufferFillIdx++;
+        bufferFillIdx %= pitchBufferWidth;
+//        cout<<bufferFillIdx<<endl;
+        pitchBuffer[bufferFillIdx]=thisPitch;
+        confidenceBuffer[bufferFillIdx]=thisConf;
+//        cout<<pitchBuffer<<endl;
+//        cout<<pitchBuffer[bufferFillIdx]<<endl<<thisPitch<<endl;
+        pitchFilter->compute();
+//        cout<<"adeu"<<endl;
     }
     if(doCentroid) centroid->compute();
     if(doSpcCmplx) spectralComplex->compute();
@@ -320,6 +341,8 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
         YinConfidence_f = (float) thisConf;
         //PitchSalience
         salience_f = (float) salienceValue;
+        FilteredPitch_f = (float) thisPitchFiltered[bufferFillIdx];
+        cout<<thisPitchFiltered<<endl;
     }else{
         YinFrequency_f = YinConfidence_f = salience_f = 0.0;
     }

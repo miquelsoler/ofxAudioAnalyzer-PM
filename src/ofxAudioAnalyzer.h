@@ -30,7 +30,7 @@ public:
     float getEnergy(){return energy_f;}
     float getPower(){return power_f;}
 
-    float getPitchFreq(){return YinFrequency_f;}
+    float getPitchFreq(){return FilteredPitch_f;}
     float getPitchConf(){return YinConfidence_f;}
     float getSalience(){return salience_f;}
 
@@ -77,6 +77,7 @@ public:
     // Getter return values
     float rms_f, energy_f, power_f;
     float YinFrequency_f, YinConfidence_f;
+    float FilteredPitch_f;
     float salience_f;
     float tFreq_f, tCents_f;
     float inharm_f;
@@ -100,6 +101,7 @@ public:
     vector<float> melBands_f;
     vector<float> dct_f;
     vector<float> hpcp_f;
+//    vector<float> FilteredPitch_f;
 
     bool onsetEvaluation (Real iDetectHfc, Real iDetectComplex, Real iDetectFlux);
 
@@ -122,6 +124,7 @@ public:
     Algorithm* window;
     Algorithm* spectrum;
     Algorithm* pitchDetect;
+    Algorithm* pitchFilter;
     Algorithm* rms;
     Algorithm* energy;
     Algorithm* power;
@@ -180,6 +183,13 @@ public:
     vector<complex<Real> > fftValues;
     vector<Real> c2pMagValues;
     vector<Real> c2pPhaseValues;
+    
+    // Filter
+    vector<Real> pitchBuffer;
+    vector<Real> confidenceBuffer;
+    vector<Real> thisPitchFiltered;
+    int bufferFillIdx;
+    int pitchBufferWidth;
 
     // TODO: Silence
     int silenceStartFrame;
