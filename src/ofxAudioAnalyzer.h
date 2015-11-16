@@ -185,12 +185,16 @@ public:
     vector<Real> c2pPhaseValues;
     
     // Filter
-    vector<Real> pitchBuffer;
-    vector<Real> confidenceBuffer;
+    deque<Real> pitchBuffer;
+    vector<Real> pitchBufferCopy;
+    deque<Real> confidenceBuffer;
+    vector<Real> confidenceBufferCopy;
     vector<Real> thisPitchFiltered;
     int bufferFillIdx;
     int pitchBufferWidth;
-
+    
+    
+    
     // TODO: Silence
     int silenceStartFrame;
     int silenceStopFrame;

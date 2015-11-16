@@ -36,10 +36,13 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
 
     audioBuffer.resize((unsigned long)bufferSize);
     
-    pitchBufferWidth=20;
+    pitchBufferWidth=293;
     pitchBuffer.resize((unsigned long)pitchBufferWidth);
     confidenceBuffer.resize((unsigned long)pitchBufferWidth);
-    bufferFillIdx=0;
+    pitchBufferCopy.resize((unsigned long)pitchBufferWidth);
+    confidenceBufferCopy.resize((unsigned long)pitchBufferWidth);
+    //thisPitchFiltered.resize((unsigned long)pitchBufferWidth);
+    //bufferFillIdx=0;
 
     essentia::init();
 
@@ -192,8 +195,8 @@ void ofxAudioAnalyzer::setup(int bufferSize, int sampleRate,
     pitchDetect->output("pitch").set(thisPitch);
     pitchDetect->output("pitchConfidence").set(thisConf);
     //PitchFilter
-    pitchFilter->input("pitch").set(pitchBuffer);
-    pitchFilter->input("pitchConfidence").set(confidenceBuffer);
+    pitchFilter->input("pitch").set(pitchBufferCopy);
+    pitchFilter->input("pitchConfidence").set(confidenceBufferCopy);
     pitchFilter->output("pitchFiltered").set(thisPitchFiltered);
     //Tuning frequency
     tuningFreq->input("frequencies").set(peakFreqValues);
@@ -286,15 +289,22 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
     if (doPitch){
         pitchSalience->compute();
         pitchDetect->compute();
-        bufferFillIdx++;
-        bufferFillIdx %= pitchBufferWidth;
-//        cout<<bufferFillIdx<<endl;
-        pitchBuffer[bufferFillIdx]=thisPitch;
-        confidenceBuffer[bufferFillIdx]=thisConf;
-//        cout<<pitchBuffer<<endl;
-//        cout<<pitchBuffer[bufferFillIdx]<<endl<<thisPitch<<endl;
+//        bufferFillIdx++;
+//        bufferFillIdx %= pitchBufferWidth;
+//        pitchBuffer[bufferFillIdx]=thisPitch;
+//        confidenceBuffer[bufferFillIdx]=thisConf;
+        pitchBuffer.pop_back();
+        confidenceBuffer.pop_back();
+        pitchBuffer.push_front(thisPitch);
+        confidenceBuffer.push_front(thisConf);
+        //pitchBufferCopy=vector<deque<Real>, Real>(pitchBuffer);
+        //confidenceBufferCopy=vector<deque<Real>, Real>(confidenceBuffer)
+        for (int i=0; i<pitchBuffer.size(); i++){
+            pitchBufferCopy[i]=pitchBuffer[i];
+            confidenceBufferCopy[i]=confidenceBuffer[i];
+        }
+        //cout<<pitchBufferCopy<<endl;
         pitchFilter->compute();
-//        cout<<"adeu"<<endl;
     }
     if(doCentroid) centroid->compute();
     if(doSpcCmplx) spectralComplex->compute();
@@ -341,8 +351,10 @@ void ofxAudioAnalyzer::analyze(float * iBuffer, int bufferSize){
         YinConfidence_f = (float) thisConf;
         //PitchSalience
         salience_f = (float) salienceValue;
-        FilteredPitch_f = (float) thisPitchFiltered[bufferFillIdx];
-        cout<<thisPitchFiltered<<endl;
+        FilteredPitch_f = (float) thisPitchFiltered[bufferFillIdx<<2];
+        //cout<<thisPitchFiltered<<endl;
+        //cout<<"---------"<<endl<<FilteredPitch_f<<endl;
+        cout<<thisPitchFiltered.size()<<endl;
     }else{
         YinFrequency_f = YinConfidence_f = salience_f = 0.0;
     }
